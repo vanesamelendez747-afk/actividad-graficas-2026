@@ -616,7 +616,109 @@ const campoDirecciones = {
   }
 };
 
+
+const campoDirecciones = {
+  id: 'campoDirecciones',
+
+  beforeDatasetsDraw(chart) {
+    const {ctx, chartArea, scales} = chart;
+
+    if (!chartArea || !scales.x || !scales.y) return;
+
+    const ecuaciones = {
+      calor: y => -0.35 * (y - 25),
+      tuberia: y => -0.1 * y * Math.abs(y),
+      friccion: y => -0.5 * y + 2,
+      poblacion: y => 0.8 * y * (1 - y / 6)
+    };
+
+    const pendiente = ecuaciones[chart.canvas.id];
+    if (!pendiente) return;
+
+    const xs = scales.x;
+    const ys = scales.y;
+
+    const xRange = Number(chart.data.labels.at(-1)) -
+                   Number(chart.data.labels[0]);
+
+    const yRange = ys.max - ys.min;
+
+    if (xRange <= 0 || yRange <= 0) return;
+
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.rect(
+      chartArea.left,
+      chartArea.top,
+      chartArea.right - chartArea.left,
+      chartArea.bottom - chartArea.top
+    );
+    ctx.clip();
+
+    ctx.strokeStyle = 'rgba(40, 90, 145, 0.85)';
+    ctx.fillStyle = 'rgba(40, 90, 145, 0.90)';
+    ctx.lineWidth = 1.4;
+
+    const columnas = 13;
+    const filas = 9;
+    const largo = 13;
+
+    for (let i = 0; i < columnas; i++) {
+      const px = chartArea.left +
+        (i + 0.5) * (chartArea.right - chartArea.left) / columnas;
+
+      for (let j = 0; j < filas; j++) {
+        const py = chartArea.top +
+          (j + 0.5) * (chartArea.bottom - chartArea.top) / filas;
+
+        const y = ys.getValueForPixel(py);
+        const m = pendiente(y);
+
+        if (!Number.isFinite(m)) continue;
+
+        const mPantalla =
+          -m * (ys.height / yRange) / (xs.width / xRange);
+
+        const norma = Math.sqrt(1 + mPantalla * mPantalla);
+
+        const dx = largo / norma;
+        const dy = largo * mPantalla / norma;
+
+        const x1 = px - dx / 2;
+        const y1 = py - dy / 2;
+        const x2 = px + dx / 2;
+        const y2 = py + dy / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        const angulo = Math.atan2(dy, dx);
+        const punta = 4;
+
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(
+          x2 - punta * Math.cos(angulo - Math.PI / 5),
+          y2 - punta * Math.sin(angulo - Math.PI / 5)
+        );
+        ctx.lineTo(
+          x2 - punta * Math.cos(angulo + Math.PI / 5),
+          y2 - punta * Math.sin(angulo + Math.PI / 5)
+        );
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+  }
+};
+
 Chart.register(campoDirecciones);
+
 
 
 
